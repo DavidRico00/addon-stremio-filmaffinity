@@ -208,6 +208,14 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // API to clear cache
+    if (pathname === '/api/clear-cache' && req.method === 'POST') {
+        cache.clearListCache();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+        return;
+    }
+
     // Addon routes: /{configId}/manifest.json, /{configId}/catalog/..., /{configId}/configure
     const parts = pathname.split('/').filter(Boolean);
     if (parts.length >= 2) {
