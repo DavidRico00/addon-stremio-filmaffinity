@@ -210,7 +210,7 @@ const server = http.createServer(async (req, res) => {
 
     // API to clear cache
     if (pathname === '/api/clear-cache' && req.method === 'POST') {
-        cache.clearListCache();
+        cache.clearAllCache();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
