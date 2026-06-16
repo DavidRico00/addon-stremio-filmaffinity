@@ -216,6 +216,31 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // Debug endpoint
+    if (pathname === '/api/debug-list' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+            try {
+                const { userId, listId } = JSON.parse(body);
+                const scraped = await scrapeList(userId, listId);
+                const first3 = scraped.items.slice(0, 3);
+                const resolved = await resolveAll(first3);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    scrapedCount: scraped.items.length,
+                    listName: scraped.listName,
+                    first3: first3.map(i => ({ title: i.title, faId: i.faId, type: i.type })),
+                    resolved: resolved.map(r => ({ title: r.title, imdbId: r.imdbId, type: r.type })),
+                }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message, stack: e.stack }));
+            }
+        });
+        return;
+    }
+
     // Addon routes: /{configId}/manifest.json, /{configId}/catalog/..., /{configId}/configure
     const parts = pathname.split('/').filter(Boolean);
     if (parts.length >= 2) {
