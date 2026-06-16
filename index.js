@@ -223,19 +223,23 @@ const server = http.createServer(async (req, res) => {
         req.on('end', async () => {
             try {
                 const { userId, listId } = JSON.parse(body);
-                const scraped = await scrapeList(userId, listId);
-                const first3 = scraped.items.slice(0, 3);
-                const resolved = await resolveAll(first3);
+                const axios = require('axios');
+                const testUrl = `https://www.filmaffinity.com/es/userlist.php?user_id=${userId}&list_id=${listId}`;
+                const testRes = await axios.get(testUrl, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+                    timeout: 15000,
+                });
+                const htmlSnippet = testRes.data.substring(0, 2000);
+                const hasMovieCards = testRes.data.includes('data-movie-id');
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
-                    scrapedCount: scraped.items.length,
-                    listName: scraped.listName,
-                    first3: first3.map(i => ({ title: i.title, faId: i.faId, type: i.type })),
-                    resolved: resolved.map(r => ({ title: r.title, imdbId: r.imdbId, type: r.type })),
+                    status: testRes.status,
+                    hasMovieCards,
+                    htmlStart: htmlSnippet,
                 }));
             } catch (e) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: e.message, stack: e.stack }));
+                res.end(JSON.stringify({ error: e.message }));
             }
         });
         return;
