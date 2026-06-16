@@ -226,7 +226,11 @@ const server = http.createServer(async (req, res) => {
                 const axios = require('axios');
                 const testUrl = `https://www.filmaffinity.com/es/userlist.php?user_id=${userId}&list_id=${listId}`;
                 const testRes = await axios.get(testUrl, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'es-ES,es;q=0.9',
+                    },
                     timeout: 15000,
                 });
                 const htmlSnippet = testRes.data.substring(0, 2000);
