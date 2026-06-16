@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filmaffinity Lists - Configuración</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 640px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #7b68ee;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 32px;
+            font-size: 0.95rem;
+        }
+        .card {
+            background: #14142a;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #252545;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: #1e1e3a;
+            border: 1px solid #333365;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #7b68ee; }
+        input::placeholder { color: #555; }
+        .list-entry {
+            background: #1a1a35;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+            border: 1px solid #252545;
+        }
+        .list-entry .row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .list-entry .row > div { flex: 1; }
+        .list-entry .row:last-child { margin-bottom: 0; }
+        .remove-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #ff5555;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .remove-btn:hover { background: rgba(255, 85, 85, 0.15); }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-secondary {
+            background: #252545;
+            color: #bbb;
+        }
+        .btn-secondary:hover { background: #303060; }
+        .btn-primary {
+            background: #7b68ee;
+            color: white;
+        }
+        .btn-primary:hover { background: #6a56dd; }
+        .btn-primary:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .result-box {
+            display: none;
+            background: #0d2f0d;
+            border: 1px solid #1a5a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            word-break: break-all;
+        }
+        .result-box h3 { color: #4caf50; margin-bottom: 12px; }
+        .result-url {
+            background: #0a1e0a;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #8f8;
+            user-select: all;
+            margin-bottom: 12px;
+        }
+        .copy-btn {
+            background: #1a5a1a;
+            color: #8f8;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .copy-btn:hover { background: #2a7a2a; }
+        .error-box {
+            background: #2f0d0d;
+            border: 1px solid #5a1a1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            color: #ff8888;
+            display: none;
+        }
+        .help {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        .or-divider {
+            text-align: center;
+            color: #555;
+            margin: 12px 0;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Filmaffinity Lists</h1>
+        <p class="subtitle">Convierte tus listas de Filmaffinity en catálogos de Stremio</p>
+
+        <div class="card">
+            <label>Tu User ID de Filmaffinity</label>
+            <input type="text" id="userId" placeholder="ej. 3732565">
+            <p class="help">Lo encuentras en la URL de tus listas: filmaffinity.com/es/userlist.php?<b>user_id=3732565</b>&list_id=...</p>
+            <div class="or-divider">— o pega la URL completa de una de tus listas —</div>
+            <input type="text" id="urlInput" placeholder="https://www.filmaffinity.com/es/userlist.php?user_id=3732565&list_id=1001">
+        </div>
+
+        <div class="card">
+            <label style="margin-bottom: 16px; font-size: 1rem; color: #ccc;">Tus listas</label>
+            <div id="lists-container">
+                <div class="list-entry" data-index="0">
+                    <div class="row">
+                        <div>
+                            <label>List ID</label>
+                            <input type="text" class="list-id" placeholder="ej. 1001">
+                        </div>
+                        <div>
+                            <label>Alias (opcional)</label>
+                            <input type="text" class="list-alias" placeholder="Mi lista de pelis">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="addList()">+ Añadir otra lista</button>
+                <button class="btn btn-primary" id="generateBtn" onclick="generate()">Generar URL de instalación</button>
+            </div>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
+
+        <div class="result-box" id="resultBox">
+            <h3>URL de instalación generada</h3>
+            <p style="color:#aaa; margin-bottom:12px; font-size:0.9rem;">Haz clic en el botón para instalar directamente en Stremio, o copia la URL manualmente:</p>
+            <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                <a class="btn btn-primary" id="stremioInstallBtn" href="#" style="text-decoration:none;">Instalar en Stremio</a>
+                <button class="copy-btn" onclick="copyUrl()">Copiar URL</button>
+            </div>
+            <div class="result-url" id="resultUrl"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = '__BASE_URL__';
+        let listCount = 1;
+
+        // Auto-extract userId from pasted URL
+        document.getElementById('urlInput').addEventListener('input', function() {
+            const url = this.value;
+            const userMatch = url.match(/user_id=(\d+)/);
+            const listMatch = url.match(/list_id=(\d+)/);
+            if (userMatch) {
+                document.getElementById('userId').value = userMatch[1];
+            }
+            if (listMatch) {
+                const firstListInput = document.querySelector('.list-id');
+                if (firstListInput && !firstListInput.value) {
+                    firstListInput.value = listMatch[1];
+                }
+            }
+        });
+
+        function addList() {
+            const container = document.getElementById('lists-container');
+            const entry = document.createElement('div');
+            entry.className = 'list-entry';
+            entry.dataset.index = listCount++;
+            entry.innerHTML = `
+                <button class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
+                <div class="row">
+                    <div>
+                        <label>List ID</label>
+                        <input type="text" class="list-id" placeholder="ej. 1002">
+                    </div>
+                    <div>
+                        <label>Alias (opcional)</label>
+                        <input type="text" class="list-alias" placeholder="Nombre personalizado">
+                    </div>
+                </div>
+            `;
+            container.appendChild(entry);
+        }
+
+        function showError(msg) {
+            const box = document.getElementById('errorBox');
+            box.textContent = msg;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 5000);
+        }
+
+        async function generate() {
+            const userId = document.getElementById('userId').value.trim();
+            if (!userId || !/^\d+$/.test(userId)) {
+                showError('Introduce un User ID válido (solo números).');
+                return;
+            }
+
+            const entries = document.querySelectorAll('.list-entry');
+            const lists = [];
+            for (const entry of entries) {
+                const listId = entry.querySelector('.list-id').value.trim();
+                const alias = entry.querySelector('.list-alias').value.trim();
+                if (!listId) continue;
+                if (!/^\d+$/.test(listId)) {
+                    showError(`List ID "${listId}" no es válido. Debe ser un número.`);
+                    return;
+                }
+                lists.push({ userId, listId, ...(alias ? { alias } : {}) });
+            }
+
+            if (lists.length === 0) {
+                showError('Añade al menos una lista.');
+                return;
+            }
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generando...';
+
+            try {
+                const res = await fetch(BASE_URL + '/api/generate-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lists }),
+                });
+                const data = await res.json();
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                document.getElementById('resultUrl').textContent = data.installUrl;
+                // Build stremio:// deep link for direct install
+                const stremioUrl = data.installUrl.replace(/^https?:\/\//, 'stremio://');
+                document.getElementById('stremioInstallBtn').href = stremioUrl;
+                document.getElementById('resultBox').style.display = 'block';
+            } catch (e) {
+                showError('Error de conexión: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generar URL de instalación';
+            }
+        }
+
+        function copyUrl() {
+            const url = document.getElementById('resultUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '¡Copiado!';
+                setTimeout(() => btn.textContent = 'Copiar URL', 2000);
+            });
+        }
+    </script>
+</body>
+</html>
