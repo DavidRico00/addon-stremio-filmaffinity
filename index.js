@@ -154,12 +154,12 @@ async function buildManifest(config) {
         catalogs.push({
             type: 'movie',
             id: catalogId,
-            name: `${name} (Películas)`,
+            name,
         });
         catalogs.push({
             type: 'series',
             id: catalogId,
-            name: `${name} (Series)`,
+            name,
         });
     }
 
