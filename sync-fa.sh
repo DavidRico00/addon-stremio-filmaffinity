@@ -46,7 +46,7 @@ for LIST_ID in $LISTS; do
 
     if grep -q "Siguiente" "$PAGEFILE" || grep -q "pag-next" "$PAGEFILE"; then
       PAGE=$((PAGE + 1))
-      sleep 1
+      sleep 3
     else
       break
     fi
@@ -66,15 +66,15 @@ for LIST_ID in $LISTS; do
       echo "  Resolving remaining items via film pages..."
       echo "$UNRESOLVED" | while IFS='|' read -r FA_ID TITLE YEAR TYPE; do
         echo "    Resolving: $TITLE ($YEAR)..."
+        sleep 3
 
         # Try Spanish film page (original title)
         curl -s -L \
           -H "User-Agent: $UA" \
-          -H "Accept: text/html" \
+          -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
           -H "Accept-Language: es-ES,es;q=0.9" \
           -o "$FILMPAGE" \
           "https://www.filmaffinity.com/es/film${FA_ID}.html"
-        sleep 1
 
         if grep -q "movie-info\|film-name\|Filmaffinity" "$FILMPAGE" 2>/dev/null; then
           R=$(curl -s -X POST \
@@ -89,14 +89,15 @@ for LIST_ID in $LISTS; do
           fi
         fi
 
+        sleep 3
+
         # Try English film page
         curl -s -L \
           -H "User-Agent: $UA" \
-          -H "Accept: text/html" \
+          -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
           -H "Accept-Language: en-US,en;q=0.9" \
           -o "$FILMPAGE" \
           "https://www.filmaffinity.com/en/film${FA_ID}.html"
-        sleep 1
 
         if grep -q "movie-info\|film-name\|Filmaffinity" "$FILMPAGE" 2>/dev/null; then
           R=$(curl -s -X POST \
@@ -116,6 +117,9 @@ for LIST_ID in $LISTS; do
       done
     fi
   fi
+
+  # Wait between lists to avoid rate limiting
+  sleep 5
 done
 
 rm -f "$PAGEFILE" "$ALLHTML" "$FILMPAGE"

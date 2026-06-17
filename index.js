@@ -46,7 +46,7 @@ async function loadListData(userId, listId) {
 
 function buildMetas(items, typeFilter) {
     return items
-        .filter(item => item.type === typeFilter)
+        .filter(item => item.imdbId && item.type === typeFilter)
         .sort((a, b) => a.position - b.position)
         .map(item => ({
             id: item.imdbId,
@@ -257,11 +257,14 @@ const server = http.createServer(async (req, res) => {
                 const resolved = await resolveAll(result.items);
                 console.log(`[Sync] Resolved ${resolved.length}/${result.items.length} IMDb IDs`);
 
-                const unresolved = result.items.filter(item =>
-                    !resolved.find(r => r.faId === item.faId)
-                );
+                const resolvedIds = new Set(resolved.map(r => r.faId));
+                const unresolved = result.items.filter(item => !resolvedIds.has(item.faId));
 
-                const listData = { listName: result.listName, items: resolved };
+                const allItems = [
+                    ...resolved,
+                    ...unresolved,
+                ];
+                const listData = { listName: result.listName, items: allItems };
                 cache.setListCache(userId, listId, listData);
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -309,10 +312,16 @@ const server = http.createServer(async (req, res) => {
                 if (result && userId && listId) {
                     const listData = cache.getListCache(userId, listId, true);
                     if (listData) {
-                        listData.items.push({
-                            faId, title, year, type: result.type,
-                            imdbId: result.id, position: listData.items.length + 1,
-                        });
+                        const existing = listData.items.find(i => i.faId === faId);
+                        if (existing) {
+                            existing.imdbId = result.id;
+                            existing.type = result.type;
+                        } else {
+                            listData.items.push({
+                                faId, title, year, type: result.type,
+                                imdbId: result.id, position: listData.items.length + 1,
+                            });
+                        }
                         cache.setListCache(userId, listId, listData);
                     }
                 }
