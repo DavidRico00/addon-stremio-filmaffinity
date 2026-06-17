@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { decodeConfig, encodeConfig } = require('./lib/config');
 const { scrapeList, parseHtml } = require('./lib/scraper');
-const { resolveAll } = require('./lib/imdb-resolver');
+const { resolveAll, resolveWithHtml } = require('./lib/imdb-resolver');
 const cache = require('./lib/cache');
 
 const PORT = parseInt(process.env.PORT) || 7000;
@@ -257,13 +257,75 @@ const server = http.createServer(async (req, res) => {
                 const resolved = await resolveAll(result.items);
                 console.log(`[Sync] Resolved ${resolved.length}/${result.items.length} IMDb IDs`);
 
+                const unresolved = result.items.filter(item =>
+                    !resolved.find(r => r.faId === item.faId)
+                );
+
                 const listData = { listName: result.listName, items: resolved };
                 cache.setListCache(userId, listId, listData);
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ ok: true, listName: result.listName, parsed: result.items.length, resolved: resolved.length }));
+                res.end(JSON.stringify({
+                    ok: true,
+                    listName: result.listName,
+                    parsed: result.items.length,
+                    resolved: resolved.length,
+                    unresolved: unresolved.map(i => ({ faId: i.faId, title: i.title, year: i.year, type: i.type })),
+                }));
             } catch (e) {
                 console.error(`[Sync] Error: ${e.message}`);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
+    // Sync-resolve endpoint: resolve a single item using pre-fetched FA film page HTML
+    if (pathname === '/api/sync-resolve' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+            try {
+                const userId = parsed.query.userId;
+                const listId = parsed.query.listId;
+                const faId = parsed.query.faId;
+                const title = decodeURIComponent(parsed.query.title || '');
+                const year = parseInt(parsed.query.year) || null;
+                const type = parsed.query.type || 'movie';
+                const lang = parsed.query.lang || 'es';
+
+                if (!faId || !body) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing faId or HTML body' }));
+                    return;
+                }
+
+                const esHtml = lang === 'es' ? body : null;
+                const enHtml = lang === 'en' ? body : null;
+
+                const result = await resolveWithHtml(faId, title, year, type, esHtml, enHtml);
+
+                if (result && userId && listId) {
+                    const listData = cache.getListCache(userId, listId, true);
+                    if (listData) {
+                        listData.items.push({
+                            faId, title, year, type: result.type,
+                            imdbId: result.id, position: listData.items.length + 1,
+                        });
+                        cache.setListCache(userId, listId, listData);
+                    }
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    ok: true,
+                    faId,
+                    resolved: result ? true : false,
+                    imdbId: result ? result.id : null,
+                }));
+            } catch (e) {
+                console.error(`[SyncResolve] Error: ${e.message}`);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: e.message }));
             }

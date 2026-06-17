@@ -11,6 +11,7 @@ LISTS="1001 1002"
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 PAGEFILE=$(mktemp)
 ALLHTML=$(mktemp)
+FILMPAGE=$(mktemp)
 
 for LIST_ID in $LISTS; do
   echo "Syncing list $LIST_ID..."
@@ -58,8 +59,64 @@ for LIST_ID in $LISTS; do
       -H "Content-Type: text/html" \
       --data-binary @"$ALLHTML")
     echo "  $RESPONSE"
+
+    # Check for unresolved items and try to resolve them
+    UNRESOLVED=$(echo "$RESPONSE" | jq -r '.unresolved[]? | "\(.faId)|\(.title)|\(.year)|\(.type)"' 2>/dev/null)
+    if [ -n "$UNRESOLVED" ]; then
+      echo "  Resolving remaining items via film pages..."
+      echo "$UNRESOLVED" | while IFS='|' read -r FA_ID TITLE YEAR TYPE; do
+        echo "    Resolving: $TITLE ($YEAR)..."
+
+        # Try Spanish film page (original title)
+        curl -s -L \
+          -H "User-Agent: $UA" \
+          -H "Accept: text/html" \
+          -H "Accept-Language: es-ES,es;q=0.9" \
+          -o "$FILMPAGE" \
+          "https://www.filmaffinity.com/es/film${FA_ID}.html"
+        sleep 1
+
+        if grep -q "film-info" "$FILMPAGE" 2>/dev/null; then
+          R=$(curl -s -X POST \
+            "$SERVER/api/sync-resolve?userId=$USER_ID&listId=$LIST_ID&faId=$FA_ID&title=$(echo "$TITLE" | jq -Rr @uri)&year=$YEAR&type=$TYPE&lang=es" \
+            -H "Content-Type: text/html" \
+            --data-binary @"$FILMPAGE")
+          RESOLVED=$(echo "$R" | jq -r '.resolved' 2>/dev/null)
+          if [ "$RESOLVED" = "true" ]; then
+            IMDB=$(echo "$R" | jq -r '.imdbId' 2>/dev/null)
+            echo "      Resolved via ES page: $IMDB"
+            continue
+          fi
+        fi
+
+        # Try English film page
+        curl -s -L \
+          -H "User-Agent: $UA" \
+          -H "Accept: text/html" \
+          -H "Accept-Language: en-US,en;q=0.9" \
+          -o "$FILMPAGE" \
+          "https://www.filmaffinity.com/en/film${FA_ID}.html"
+        sleep 1
+
+        if grep -q "film-info" "$FILMPAGE" 2>/dev/null; then
+          R=$(curl -s -X POST \
+            "$SERVER/api/sync-resolve?userId=$USER_ID&listId=$LIST_ID&faId=$FA_ID&title=$(echo "$TITLE" | jq -Rr @uri)&year=$YEAR&type=$TYPE&lang=en" \
+            -H "Content-Type: text/html" \
+            --data-binary @"$FILMPAGE")
+          RESOLVED=$(echo "$R" | jq -r '.resolved' 2>/dev/null)
+          if [ "$RESOLVED" = "true" ]; then
+            IMDB=$(echo "$R" | jq -r '.imdbId' 2>/dev/null)
+            echo "      Resolved via EN page: $IMDB"
+          else
+            echo "      Could not resolve"
+          fi
+        else
+          echo "      Could not fetch film page"
+        fi
+      done
+    fi
   fi
 done
 
-rm -f "$PAGEFILE" "$ALLHTML"
+rm -f "$PAGEFILE" "$ALLHTML" "$FILMPAGE"
 echo "Done!"
