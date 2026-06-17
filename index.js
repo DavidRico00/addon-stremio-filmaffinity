@@ -230,7 +230,20 @@ const server = http.createServer(async (req, res) => {
         req.on('data', chunk => { body += chunk; });
         req.on('end', async () => {
             try {
-                const { userId, listId, html } = JSON.parse(body);
+                let userId, listId, html;
+
+                const contentType = req.headers['content-type'] || '';
+                if (contentType.includes('application/json')) {
+                    const json = JSON.parse(body);
+                    userId = json.userId;
+                    listId = json.listId;
+                    html = json.html;
+                } else {
+                    userId = parsed.query.userId;
+                    listId = parsed.query.listId;
+                    html = body;
+                }
+
                 if (!userId || !listId || !html) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'Missing userId, listId, or html' }));

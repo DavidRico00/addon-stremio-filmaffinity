@@ -10,7 +10,6 @@ LISTS="1001 1002"
 
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 HTMLFILE=$(mktemp)
-JSONFILE=$(mktemp)
 
 for LIST_ID in $LISTS; do
   echo "Syncing list $LIST_ID..."
@@ -23,11 +22,10 @@ for LIST_ID in $LISTS; do
     "https://www.filmaffinity.com/es/userlist.php?user_id=$USER_ID&list_id=$LIST_ID"
 
   if grep -q "data-movie-id" "$HTMLFILE"; then
-    jq -n --arg u "$USER_ID" --arg l "$LIST_ID" --rawfile h "$HTMLFILE" \
-      '{userId: $u, listId: $l, html: $h}' > "$JSONFILE"
-    RESPONSE=$(curl -s -X POST "$SERVER/api/sync" \
-      -H "Content-Type: application/json" \
-      -d @"$JSONFILE")
+    RESPONSE=$(curl -s -X POST \
+      "$SERVER/api/sync?userId=$USER_ID&listId=$LIST_ID" \
+      -H "Content-Type: text/html" \
+      --data-binary @"$HTMLFILE")
     echo "  $RESPONSE"
   else
     echo "  Error: Cloudflare blocked the request or list is empty"
@@ -35,5 +33,5 @@ for LIST_ID in $LISTS; do
   fi
 done
 
-rm -f "$HTMLFILE" "$JSONFILE"
+rm -f "$HTMLFILE"
 echo "Done!"
