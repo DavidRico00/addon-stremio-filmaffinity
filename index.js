@@ -17,23 +17,31 @@ cache.init();
 const catalogStore = {};
 
 async function loadListData(userId, listId) {
-    // Check memory/disk cache first
     let listData = cache.getListCache(userId, listId);
     if (listData) {
         console.log(`[Main] Using cached data for userId=${userId}, listId=${listId}`);
         return listData;
     }
 
-    // Scrape and resolve
     console.log(`[Main] Scraping userId=${userId}, listId=${listId}...`);
-    const scraped = await scrapeList(userId, listId);
-    console.log(`[Main] Resolving IMDb IDs for ${scraped.items.length} items...`);
-    const resolved = await resolveAll(scraped.items);
-    console.log(`[Main] Resolved ${resolved.length}/${scraped.items.length} items`);
+    try {
+        const scraped = await scrapeList(userId, listId);
+        console.log(`[Main] Resolving IMDb IDs for ${scraped.items.length} items...`);
+        const resolved = await resolveAll(scraped.items);
+        console.log(`[Main] Resolved ${resolved.length}/${scraped.items.length} items`);
 
-    listData = { listName: scraped.listName, items: resolved };
-    cache.setListCache(userId, listId, listData);
-    return listData;
+        listData = { listName: scraped.listName, items: resolved };
+        cache.setListCache(userId, listId, listData);
+        return listData;
+    } catch (err) {
+        console.error(`[Main] Scraping failed: ${err.message}`);
+        const stale = cache.getListCache(userId, listId, true);
+        if (stale) {
+            console.log(`[Main] Using stale cache as fallback`);
+            return stale;
+        }
+        throw err;
+    }
 }
 
 function buildMetas(items, typeFilter) {
