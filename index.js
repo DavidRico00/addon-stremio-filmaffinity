@@ -4,7 +4,7 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 const { decodeConfig, encodeConfig } = require('./lib/config');
-const { scrapeList } = require('./lib/scraper');
+const { scrapeList, parseHtml } = require('./lib/scraper');
 const { resolveAll } = require('./lib/imdb-resolver');
 const cache = require('./lib/cache');
 
@@ -221,6 +221,40 @@ const server = http.createServer(async (req, res) => {
         cache.clearAllCache();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
+        return;
+    }
+
+    // Sync endpoint: receive HTML from Termux/client, parse and resolve
+    if (pathname === '/api/sync' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+            try {
+                const { userId, listId, html } = JSON.parse(body);
+                if (!userId || !listId || !html) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Missing userId, listId, or html' }));
+                    return;
+                }
+
+                console.log(`[Sync] Received HTML for userId=${userId}, listId=${listId} (${html.length} chars)`);
+                const parsed = parseHtml(html);
+                console.log(`[Sync] Parsed ${parsed.items.length} items from list "${parsed.listName}"`);
+
+                const resolved = await resolveAll(parsed.items);
+                console.log(`[Sync] Resolved ${resolved.length}/${parsed.items.length} IMDb IDs`);
+
+                const listData = { listName: parsed.listName, items: resolved };
+                cache.setListCache(userId, listId, listData);
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, listName: parsed.listName, count: resolved.length }));
+            } catch (e) {
+                console.error(`[Sync] Error: ${e.message}`);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
         return;
     }
 
