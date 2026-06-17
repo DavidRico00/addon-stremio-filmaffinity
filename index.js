@@ -231,23 +231,20 @@ const server = http.createServer(async (req, res) => {
         req.on('end', async () => {
             try {
                 const { userId, listId } = JSON.parse(body);
-                const axios = require('axios');
+                const { execSync } = require('child_process');
                 const testUrl = `https://www.filmaffinity.com/es/userlist.php?user_id=${userId}&list_id=${listId}`;
-                const testRes = await axios.get(testUrl, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'es-ES,es;q=0.9',
-                    },
-                    timeout: 15000,
-                });
-                const htmlSnippet = testRes.data.substring(0, 2000);
-                const hasMovieCards = testRes.data.includes('data-movie-id');
+                let curlVersion = 'unknown';
+                try { curlVersion = execSync('curl --version', { encoding: 'utf8', timeout: 5000 }).split('\n')[0]; } catch(e) { curlVersion = 'not found: ' + e.message; }
+                let html = '';
+                try {
+                    html = execSync(`curl -s -L --max-time 15 -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36" "${testUrl}"`, { encoding: 'utf8', timeout: 20000 });
+                } catch(e) { html = 'curl error: ' + e.message; }
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
-                    status: testRes.status,
-                    hasMovieCards,
-                    htmlStart: htmlSnippet,
+                    curlVersion,
+                    htmlLength: html.length,
+                    hasMovieCards: html.includes('data-movie-id'),
+                    htmlStart: html.substring(0, 1000),
                 }));
             } catch (e) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
