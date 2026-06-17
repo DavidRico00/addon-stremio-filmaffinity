@@ -248,7 +248,7 @@ const server = http.createServer(async (req, res) => {
                 cache.setListCache(userId, listId, listData);
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ ok: true, listName: parsed.listName, count: resolved.length }));
+                res.end(JSON.stringify({ ok: true, listName: parsed.listName, parsed: parsed.items.length, resolved: resolved.length }));
             } catch (e) {
                 console.error(`[Sync] Error: ${e.message}`);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
