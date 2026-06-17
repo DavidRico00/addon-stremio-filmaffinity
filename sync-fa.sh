@@ -76,7 +76,7 @@ for LIST_ID in $LISTS; do
           "https://www.filmaffinity.com/es/film${FA_ID}.html"
         sleep 1
 
-        if grep -q "film-info" "$FILMPAGE" 2>/dev/null; then
+        if grep -q "movie-info\|film-name\|Filmaffinity" "$FILMPAGE" 2>/dev/null; then
           R=$(curl -s -X POST \
             "$SERVER/api/sync-resolve?userId=$USER_ID&listId=$LIST_ID&faId=$FA_ID&title=$(echo "$TITLE" | jq -Rr @uri)&year=$YEAR&type=$TYPE&lang=es" \
             -H "Content-Type: text/html" \
@@ -98,7 +98,7 @@ for LIST_ID in $LISTS; do
           "https://www.filmaffinity.com/en/film${FA_ID}.html"
         sleep 1
 
-        if grep -q "film-info" "$FILMPAGE" 2>/dev/null; then
+        if grep -q "movie-info\|film-name\|Filmaffinity" "$FILMPAGE" 2>/dev/null; then
           R=$(curl -s -X POST \
             "$SERVER/api/sync-resolve?userId=$USER_ID&listId=$LIST_ID&faId=$FA_ID&title=$(echo "$TITLE" | jq -Rr @uri)&year=$YEAR&type=$TYPE&lang=en" \
             -H "Content-Type: text/html" \
