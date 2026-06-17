@@ -8,21 +8,26 @@ USER_ID="3732565"
 LISTS="1001 1002"
 # =====================
 
+UA="Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+
 for LIST_ID in $LISTS; do
   echo "Syncing list $LIST_ID..."
 
-  HTML=$(curl -s -L "https://www.filmaffinity.com/es/userlist.php?user_id=$USER_ID&list_id=$LIST_ID")
+  HTML=$(curl -s -L \
+    -H "User-Agent: $UA" \
+    -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+    -H "Accept-Language: es-ES,es;q=0.9" \
+    "https://www.filmaffinity.com/es/userlist.php?user_id=$USER_ID&list_id=$LIST_ID")
 
-  if [ -z "$HTML" ]; then
-    echo "  Error: could not fetch list $LIST_ID"
-    continue
+  if echo "$HTML" | grep -q "data-movie-id"; then
+    RESPONSE=$(curl -s -X POST "$SERVER/api/sync" \
+      -H "Content-Type: application/json" \
+      -d "{\"userId\":\"$USER_ID\",\"listId\":\"$LIST_ID\",\"html\":$(echo "$HTML" | jq -Rs .)}")
+    echo "  $RESPONSE"
+  else
+    echo "  Error: Cloudflare blocked the request or list is empty"
+    echo "  Try opening filmaffinity.com in your phone browser first, then retry"
   fi
-
-  RESPONSE=$(curl -s -X POST "$SERVER/api/sync" \
-    -H "Content-Type: application/json" \
-    -d "{\"userId\":\"$USER_ID\",\"listId\":\"$LIST_ID\",\"html\":$(echo "$HTML" | jq -Rs .)}")
-
-  echo "  $RESPONSE"
 done
 
 echo "Done!"
