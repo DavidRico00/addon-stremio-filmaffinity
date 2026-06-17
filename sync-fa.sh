@@ -8,7 +8,7 @@ USER_ID="3732565"
 LISTS="1001 1002"
 # =====================
 
-UA="Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
 for LIST_ID in $LISTS; do
   echo "Syncing list $LIST_ID..."
