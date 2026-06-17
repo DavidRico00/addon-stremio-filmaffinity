@@ -9,6 +9,7 @@ LISTS="1001 1002"
 # =====================
 
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+TMPFILE=$(mktemp)
 
 for LIST_ID in $LISTS; do
   echo "Syncing list $LIST_ID..."
@@ -20,9 +21,11 @@ for LIST_ID in $LISTS; do
     "https://www.filmaffinity.com/es/userlist.php?user_id=$USER_ID&list_id=$LIST_ID")
 
   if echo "$HTML" | grep -q "data-movie-id"; then
+    jq -n --arg u "$USER_ID" --arg l "$LIST_ID" --arg h "$HTML" \
+      '{userId: $u, listId: $l, html: $h}' > "$TMPFILE"
     RESPONSE=$(curl -s -X POST "$SERVER/api/sync" \
       -H "Content-Type: application/json" \
-      -d "{\"userId\":\"$USER_ID\",\"listId\":\"$LIST_ID\",\"html\":$(echo "$HTML" | jq -Rs .)}")
+      -d @"$TMPFILE")
     echo "  $RESPONSE"
   else
     echo "  Error: Cloudflare blocked the request or list is empty"
@@ -30,4 +33,5 @@ for LIST_ID in $LISTS; do
   fi
 done
 
+rm -f "$TMPFILE"
 echo "Done!"
