@@ -251,17 +251,17 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 console.log(`[Sync] Received HTML for userId=${userId}, listId=${listId} (${html.length} chars)`);
-                const parsed = parseHtml(html);
-                console.log(`[Sync] Parsed ${parsed.items.length} items from list "${parsed.listName}"`);
+                const result = parseHtml(html);
+                console.log(`[Sync] Parsed ${result.items.length} items from list "${result.listName}"`);
 
-                const resolved = await resolveAll(parsed.items);
-                console.log(`[Sync] Resolved ${resolved.length}/${parsed.items.length} IMDb IDs`);
+                const resolved = await resolveAll(result.items);
+                console.log(`[Sync] Resolved ${resolved.length}/${result.items.length} IMDb IDs`);
 
-                const listData = { listName: parsed.listName, items: resolved };
+                const listData = { listName: result.listName, items: resolved };
                 cache.setListCache(userId, listId, listData);
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ ok: true, listName: parsed.listName, parsed: parsed.items.length, resolved: resolved.length }));
+                res.end(JSON.stringify({ ok: true, listName: result.listName, parsed: result.items.length, resolved: resolved.length }));
             } catch (e) {
                 console.error(`[Sync] Error: ${e.message}`);
                 res.writeHead(500, { 'Content-Type': 'application/json' });

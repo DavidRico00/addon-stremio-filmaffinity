@@ -9,29 +9,57 @@ LISTS="1001 1002"
 # =====================
 
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-HTMLFILE=$(mktemp)
+PAGEFILE=$(mktemp)
+ALLHTML=$(mktemp)
 
 for LIST_ID in $LISTS; do
   echo "Syncing list $LIST_ID..."
+  > "$ALLHTML"
+  PAGE=1
+  FOUND_ITEMS=0
 
-  curl -s -L \
-    -H "User-Agent: $UA" \
-    -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-    -H "Accept-Language: es-ES,es;q=0.9" \
-    -o "$HTMLFILE" \
-    "https://www.filmaffinity.com/es/userlist.php?user_id=$USER_ID&list_id=$LIST_ID"
+  while true; do
+    URL="https://www.filmaffinity.com/es/userlist.php?user_id=$USER_ID&list_id=$LIST_ID"
+    if [ $PAGE -gt 1 ]; then
+      URL="${URL}&p=$PAGE"
+    fi
 
-  if grep -q "data-movie-id" "$HTMLFILE"; then
+    curl -s -L \
+      -H "User-Agent: $UA" \
+      -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+      -H "Accept-Language: es-ES,es;q=0.9" \
+      -o "$PAGEFILE" \
+      "$URL"
+
+    if ! grep -q "data-movie-id" "$PAGEFILE"; then
+      if [ $PAGE -eq 1 ]; then
+        echo "  Error: Cloudflare blocked the request or list is empty"
+      fi
+      break
+    fi
+
+    ITEMS=$(grep -o "data-movie-id" "$PAGEFILE" | wc -l)
+    FOUND_ITEMS=$((FOUND_ITEMS + ITEMS))
+    echo "  Page $PAGE: $ITEMS items"
+    cat "$PAGEFILE" >> "$ALLHTML"
+
+    if grep -q "Siguiente" "$PAGEFILE" || grep -q "pag-next" "$PAGEFILE"; then
+      PAGE=$((PAGE + 1))
+      sleep 1
+    else
+      break
+    fi
+  done
+
+  if [ $FOUND_ITEMS -gt 0 ]; then
+    echo "  Sending $FOUND_ITEMS items to server..."
     RESPONSE=$(curl -s -X POST \
       "$SERVER/api/sync?userId=$USER_ID&listId=$LIST_ID" \
       -H "Content-Type: text/html" \
-      --data-binary @"$HTMLFILE")
+      --data-binary @"$ALLHTML")
     echo "  $RESPONSE"
-  else
-    echo "  Error: Cloudflare blocked the request or list is empty"
-    echo "  Try opening filmaffinity.com in your phone browser first, then retry"
   fi
 done
 
-rm -f "$HTMLFILE"
+rm -f "$PAGEFILE" "$ALLHTML"
 echo "Done!"
