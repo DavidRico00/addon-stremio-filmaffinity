@@ -11,7 +11,11 @@ const cache = require('./lib/cache');
 const PORT = parseInt(process.env.PORT) || 7000;
 const BASE_URL = process.env.BASE_URL || `http://127.0.0.1:${PORT}`;
 
-cache.init();
+cache.init().then(() => {
+    console.log('[Main] Cache initialized');
+}).catch(err => {
+    console.error('[Main] Cache init error:', err.message);
+});
 
 // --- In-memory store for resolved catalog data per user config ---
 const catalogStore = {};
@@ -218,7 +222,7 @@ const server = http.createServer(async (req, res) => {
 
     // API to clear cache
     if (pathname === '/api/clear-cache' && req.method === 'POST') {
-        cache.clearAllCache();
+        await cache.clearAllCache();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
